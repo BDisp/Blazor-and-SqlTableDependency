@@ -1,0 +1,75 @@
+﻿@page "/"
+
+@using BlazorApp1.Models
+@using BlazorApp1.Service
+@using TableDependency.SqlClient.Base.Enums
+
+@inject ITableChangeBroadcastService StockService
+@implements IDisposable
+
+<h1>Stock prices</h1>
+
+<p>Immediate client notification on record table change with Blazor</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Price</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var stock in stocks)
+        {
+            <tr>
+                <td>@stock.Code</td>
+                <td>@stock.Name</td>
+                <td>@stock.Price</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    IList<Stock> stocks;
+
+    protected override void OnInitialized()
+    {
+        // Subscription to table record change
+        this.StockService.OnStockChanged += this.StockChanged;
+        this.stocks = this.StockService.GetCurrentValues();
+    }
+
+    private async void StockChanged(object sender, StockChangeEventArgs args)
+    {
+        var recordToUpdate = this.stocks.FirstOrDefault(x => x.Code == args.NewValue.Code);
+        switch (args.ChangeType)
+        {
+            case ChangeType.None:
+                break;
+            case ChangeType.Delete:
+                this.stocks.Remove(recordToUpdate);
+                break;
+            case ChangeType.Insert:
+                this.stocks.Add(args.NewValue);
+                break;
+            case ChangeType.Update:
+                int idx = this.stocks.IndexOf(recordToUpdate);
+                this.stocks[idx] = args.NewValue;
+                break;
+            default:
+                break;
+        }
+
+        await InvokeAsync(() =>
+        {
+            base.StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        this.StockService.OnStockChanged -= this.StockChanged;
+    }
+}
