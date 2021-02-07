@@ -12,6 +12,9 @@ GO
 USE [TableDependencyDB]
 GO
 
+ALTER DATABASE [TableDependencyDB] SET ENABLE_BROKER;
+GO
+
 DROP TABLE [Stocks]
 GO
 CREATE TABLE [dbo].[Stocks](
